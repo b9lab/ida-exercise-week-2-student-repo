@@ -1,6 +1,4 @@
-import { txClient, queryClient, MissingWalletError } from './module'
-// @ts-ignore
-import { SpVuexError } from '@starport/vuex'
+import { txClient, queryClient, MissingWalletError , registry} from './module'
 
 
 
@@ -46,6 +44,7 @@ const getDefaultState = () => {
 				_Structure: {
 						
 		},
+		_Registry: registry,
 		_Subscriptions: new Set(),
 	}
 }
@@ -64,16 +63,19 @@ export default {
 			state[query][JSON.stringify(key)] = value
 		},
 		SUBSCRIBE(state, subscription) {
-			state._Subscriptions.add(subscription)
+			state._Subscriptions.add(JSON.stringify(subscription))
 		},
 		UNSUBSCRIBE(state, subscription) {
-			state._Subscriptions.delete(subscription)
+			state._Subscriptions.delete(JSON.stringify(subscription))
 		}
 	},
 	getters: {
 				
 		getTypeStructure: (state) => (type) => {
 			return state._Structure[type].fields
+		},
+		getRegistry: (state) => {
+			return state._Registry
 		}
 	},
 	actions: {
@@ -94,9 +96,10 @@ export default {
 		async StoreUpdate({ state, dispatch }) {
 			state._Subscriptions.forEach(async (subscription) => {
 				try {
-					await dispatch(subscription.action, subscription.payload)
+					const sub=JSON.parse(subscription)
+					await dispatch(sub.action, sub.payload)
 				}catch(e) {
-					throw new SpVuexError('Subscriptions: ' + e.message)
+					throw new Error('Subscriptions: ' + e.message)
 				}
 			})
 		},
@@ -110,9 +113,9 @@ export default {
 				return result
 			} catch (e) {
 				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgVerifyInvariant:Init', 'Could not initialize signing client. Wallet is required.')
+					throw new Error('TxClient:MsgVerifyInvariant:Init Could not initialize signing client. Wallet is required.')
 				}else{
-					throw new SpVuexError('TxClient:MsgVerifyInvariant:Send', 'Could not broadcast Tx: '+ e.message)
+					throw new Error('TxClient:MsgVerifyInvariant:Send Could not broadcast Tx: '+ e.message)
 				}
 			}
 		},
@@ -124,10 +127,9 @@ export default {
 				return msg
 			} catch (e) {
 				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgVerifyInvariant:Init', 'Could not initialize signing client. Wallet is required.')
+					throw new Error('TxClient:MsgVerifyInvariant:Init Could not initialize signing client. Wallet is required.')
 				}else{
-					throw new SpVuexError('TxClient:MsgVerifyInvariant:Create', 'Could not create message: ' + e.message)
-					
+					throw new Error('TxClient:MsgVerifyInvariant:Create Could not create message: ' + e.message)
 				}
 			}
 		},

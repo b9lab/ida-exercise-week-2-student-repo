@@ -5,7 +5,7 @@ import (
 
 	"github.com/b9lab/cosmos-academy-exercise-simple/app"
 	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
-	"github.com/tendermint/spm/cosmoscmd"
+	"github.com/ignite-hq/cli/ignite/pkg/cosmoscmd"
 )
 
 func main() {

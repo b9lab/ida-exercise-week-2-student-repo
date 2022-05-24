@@ -48,10 +48,13 @@ Example 2: Pack and unpack a message in Java.
  Example 4: Pack and unpack a message in Go
 
      foo := &pb.Foo{...}
-     any, err := ptypes.MarshalAny(foo)
+     any, err := anypb.New(foo)
+     if err != nil {
+       ...
+     }
      ...
      foo := &pb.Foo{}
-     if err := ptypes.UnmarshalAny(any, foo); err != nil {
+     if err := any.UnmarshalTo(foo); err != nil {
        ...
      }
 
@@ -120,13 +123,7 @@ export interface ProtobufAny {
    * Schemes other than `http`, `https` (or the empty scheme) might be
    * used with implementation specific semantics.
    */
-  typeUrl?: string;
-
-  /**
-   * Must be a valid serialized protocol buffer of the above specified type.
-   * @format byte
-   */
-  value?: string;
+  "@type"?: string;
 }
 
 export interface RpcStatus {
@@ -153,7 +150,7 @@ proposal.
 */
 export interface V1Beta1Deposit {
   /** @format uint64 */
-  proposalId?: string;
+  proposal_id?: string;
   depositor?: string;
   amount?: V1Beta1Coin[];
 }
@@ -163,13 +160,13 @@ export interface V1Beta1Deposit {
  */
 export interface V1Beta1DepositParams {
   /** Minimum deposit for a proposal to enter voting period. */
-  minDeposit?: V1Beta1Coin[];
+  min_deposit?: V1Beta1Coin[];
 
   /**
    * Maximum period for Atom holders to deposit on a proposal. Initial value: 2
    *  months.
    */
-  maxDepositPeriod?: string;
+  max_deposit_period?: string;
 }
 
 /**
@@ -182,13 +179,20 @@ export type V1Beta1MsgDepositResponse = object;
  */
 export interface V1Beta1MsgSubmitProposalResponse {
   /** @format uint64 */
-  proposalId?: string;
+  proposal_id?: string;
 }
 
 /**
  * MsgVoteResponse defines the Msg/Vote response type.
  */
 export type V1Beta1MsgVoteResponse = object;
+
+/**
+* MsgVoteWeightedResponse defines the Msg/VoteWeighted response type.
+
+Since: cosmos-sdk 0.43
+*/
+export type V1Beta1MsgVoteWeightedResponse = object;
 
 /**
 * message SomeRequest {
@@ -226,7 +230,14 @@ export interface V1Beta1PageRequest {
    * count_total is only respected when offset is used. It is ignored when key
    * is set.
    */
-  countTotal?: boolean;
+  count_total?: boolean;
+
+  /**
+   * reverse is set to true if results are to be returned in the descending order.
+   *
+   * Since: cosmos-sdk 0.43
+   */
+  reverse?: boolean;
 }
 
 /**
@@ -240,7 +251,7 @@ corresponding request message has used PageRequest.
 */
 export interface V1Beta1PageResponse {
   /** @format byte */
-  nextKey?: string;
+  next_key?: string;
 
   /** @format uint64 */
   total?: string;
@@ -251,7 +262,7 @@ export interface V1Beta1PageResponse {
  */
 export interface V1Beta1Proposal {
   /** @format uint64 */
-  proposalId?: string;
+  proposal_id?: string;
 
   /**
    * `Any` contains an arbitrary serialized protocol buffer message along with a
@@ -292,10 +303,13 @@ export interface V1Beta1Proposal {
    *  Example 4: Pack and unpack a message in Go
    *
    *      foo := &pb.Foo{...}
-   *      any, err := ptypes.MarshalAny(foo)
+   *      any, err := anypb.New(foo)
+   *      if err != nil {
+   *        ...
+   *      }
    *      ...
    *      foo := &pb.Foo{}
-   *      if err := ptypes.UnmarshalAny(any, foo); err != nil {
+   *      if err := any.UnmarshalTo(foo); err != nil {
    *        ...
    *      }
    *
@@ -354,20 +368,20 @@ export interface V1Beta1Proposal {
   status?: V1Beta1ProposalStatus;
 
   /** TallyResult defines a standard tally for a governance proposal. */
-  finalTallyResult?: V1Beta1TallyResult;
+  final_tally_result?: V1Beta1TallyResult;
 
   /** @format date-time */
-  submitTime?: string;
+  submit_time?: string;
 
   /** @format date-time */
-  depositEndTime?: string;
-  totalDeposit?: V1Beta1Coin[];
+  deposit_end_time?: string;
+  total_deposit?: V1Beta1Coin[];
 
   /** @format date-time */
-  votingStartTime?: string;
+  voting_start_time?: string;
 
   /** @format date-time */
-  votingEndTime?: string;
+  voting_end_time?: string;
 }
 
 /**
@@ -417,13 +431,13 @@ export interface V1Beta1QueryDepositsResponse {
  */
 export interface V1Beta1QueryParamsResponse {
   /** voting_params defines the parameters related to voting. */
-  votingParams?: V1Beta1VotingParams;
+  voting_params?: V1Beta1VotingParams;
 
   /** deposit_params defines the parameters related to deposit. */
-  depositParams?: V1Beta1DepositParams;
+  deposit_params?: V1Beta1DepositParams;
 
   /** tally_params defines the parameters related to tally. */
-  tallyParams?: V1Beta1TallyParams;
+  tally_params?: V1Beta1TallyParams;
 }
 
 /**
@@ -494,7 +508,7 @@ export interface V1Beta1TallyParams {
    *  vetoed. Default value: 1/3.
    * @format byte
    */
-  vetoThreshold?: string;
+  veto_threshold?: string;
 }
 
 /**
@@ -504,7 +518,7 @@ export interface V1Beta1TallyResult {
   yes?: string;
   abstain?: string;
   no?: string;
-  noWithVeto?: string;
+  no_with_veto?: string;
 }
 
 /**
@@ -513,19 +527,16 @@ A Vote consists of a proposal ID, the voter, and the vote option.
 */
 export interface V1Beta1Vote {
   /** @format uint64 */
-  proposalId?: string;
+  proposal_id?: string;
   voter?: string;
 
   /**
-   * VoteOption enumerates the valid vote options for a given governance proposal.
-   *
-   *  - VOTE_OPTION_UNSPECIFIED: VOTE_OPTION_UNSPECIFIED defines a no-op vote option.
-   *  - VOTE_OPTION_YES: VOTE_OPTION_YES defines a yes vote option.
-   *  - VOTE_OPTION_ABSTAIN: VOTE_OPTION_ABSTAIN defines an abstain vote option.
-   *  - VOTE_OPTION_NO: VOTE_OPTION_NO defines a no vote option.
-   *  - VOTE_OPTION_NO_WITH_VETO: VOTE_OPTION_NO_WITH_VETO defines a no with veto vote option.
+   * Deprecated: Prefer to use `options` instead. This field is set in queries
+   * if and only if `len(options) == 1` and that option has weight 1. In all
+   * other cases, this field will default to VOTE_OPTION_UNSPECIFIED.
    */
   option?: V1Beta1VoteOption;
+  options?: V1Beta1WeightedVoteOption[];
 }
 
 /**
@@ -550,7 +561,26 @@ export enum V1Beta1VoteOption {
  */
 export interface V1Beta1VotingParams {
   /** Length of the voting period. */
-  votingPeriod?: string;
+  voting_period?: string;
+}
+
+/**
+* WeightedVoteOption defines a unit of vote for vote split.
+
+Since: cosmos-sdk 0.43
+*/
+export interface V1Beta1WeightedVoteOption {
+  /**
+   * VoteOption enumerates the valid vote options for a given governance proposal.
+   *
+   *  - VOTE_OPTION_UNSPECIFIED: VOTE_OPTION_UNSPECIFIED defines a no-op vote option.
+   *  - VOTE_OPTION_YES: VOTE_OPTION_YES defines a yes vote option.
+   *  - VOTE_OPTION_ABSTAIN: VOTE_OPTION_ABSTAIN defines an abstain vote option.
+   *  - VOTE_OPTION_NO: VOTE_OPTION_NO defines a no vote option.
+   *  - VOTE_OPTION_NO_WITH_VETO: VOTE_OPTION_NO_WITH_VETO defines a no with veto vote option.
+   */
+  option?: V1Beta1VoteOption;
+  weight?: string;
 }
 
 export type QueryParamsType = Record<string | number, any>;
@@ -755,11 +785,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
    * @tags Query
    * @name QueryParams
    * @summary Params queries all parameters of the gov module.
-   * @request GET:/cosmos/gov/v1beta1/params/{paramsType}
+   * @request GET:/cosmos/gov/v1beta1/params/{params_type}
    */
-  queryParams = (paramsType: string, params: RequestParams = {}) =>
+  queryParams = (params_type: string, params: RequestParams = {}) =>
     this.request<V1Beta1QueryParamsResponse, RpcStatus>({
-      path: `/cosmos/gov/v1beta1/params/${paramsType}`,
+      path: `/cosmos/gov/v1beta1/params/${params_type}`,
       method: "GET",
       format: "json",
       ...params,
@@ -775,7 +805,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
    */
   queryProposals = (
     query?: {
-      proposalStatus?:
+      proposal_status?:
         | "PROPOSAL_STATUS_UNSPECIFIED"
         | "PROPOSAL_STATUS_DEPOSIT_PERIOD"
         | "PROPOSAL_STATUS_VOTING_PERIOD"
@@ -787,7 +817,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       "pagination.key"?: string;
       "pagination.offset"?: string;
       "pagination.limit"?: string;
-      "pagination.countTotal"?: boolean;
+      "pagination.count_total"?: boolean;
+      "pagination.reverse"?: boolean;
     },
     params: RequestParams = {},
   ) =>
@@ -805,11 +836,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
    * @tags Query
    * @name QueryProposal
    * @summary Proposal queries proposal details based on ProposalID.
-   * @request GET:/cosmos/gov/v1beta1/proposals/{proposalId}
+   * @request GET:/cosmos/gov/v1beta1/proposals/{proposal_id}
    */
-  queryProposal = (proposalId: string, params: RequestParams = {}) =>
+  queryProposal = (proposal_id: string, params: RequestParams = {}) =>
     this.request<V1Beta1QueryProposalResponse, RpcStatus>({
-      path: `/cosmos/gov/v1beta1/proposals/${proposalId}`,
+      path: `/cosmos/gov/v1beta1/proposals/${proposal_id}`,
       method: "GET",
       format: "json",
       ...params,
@@ -821,20 +852,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
    * @tags Query
    * @name QueryDeposits
    * @summary Deposits queries all deposits of a single proposal.
-   * @request GET:/cosmos/gov/v1beta1/proposals/{proposalId}/deposits
+   * @request GET:/cosmos/gov/v1beta1/proposals/{proposal_id}/deposits
    */
   queryDeposits = (
-    proposalId: string,
+    proposal_id: string,
     query?: {
       "pagination.key"?: string;
       "pagination.offset"?: string;
       "pagination.limit"?: string;
-      "pagination.countTotal"?: boolean;
+      "pagination.count_total"?: boolean;
+      "pagination.reverse"?: boolean;
     },
     params: RequestParams = {},
   ) =>
     this.request<V1Beta1QueryDepositsResponse, RpcStatus>({
-      path: `/cosmos/gov/v1beta1/proposals/${proposalId}/deposits`,
+      path: `/cosmos/gov/v1beta1/proposals/${proposal_id}/deposits`,
       method: "GET",
       query: query,
       format: "json",
@@ -847,11 +879,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
    * @tags Query
    * @name QueryDeposit
    * @summary Deposit queries single deposit information based proposalID, depositAddr.
-   * @request GET:/cosmos/gov/v1beta1/proposals/{proposalId}/deposits/{depositor}
+   * @request GET:/cosmos/gov/v1beta1/proposals/{proposal_id}/deposits/{depositor}
    */
-  queryDeposit = (proposalId: string, depositor: string, params: RequestParams = {}) =>
+  queryDeposit = (proposal_id: string, depositor: string, params: RequestParams = {}) =>
     this.request<V1Beta1QueryDepositResponse, RpcStatus>({
-      path: `/cosmos/gov/v1beta1/proposals/${proposalId}/deposits/${depositor}`,
+      path: `/cosmos/gov/v1beta1/proposals/${proposal_id}/deposits/${depositor}`,
       method: "GET",
       format: "json",
       ...params,
@@ -863,11 +895,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
    * @tags Query
    * @name QueryTallyResult
    * @summary TallyResult queries the tally of a proposal vote.
-   * @request GET:/cosmos/gov/v1beta1/proposals/{proposalId}/tally
+   * @request GET:/cosmos/gov/v1beta1/proposals/{proposal_id}/tally
    */
-  queryTallyResult = (proposalId: string, params: RequestParams = {}) =>
+  queryTallyResult = (proposal_id: string, params: RequestParams = {}) =>
     this.request<V1Beta1QueryTallyResultResponse, RpcStatus>({
-      path: `/cosmos/gov/v1beta1/proposals/${proposalId}/tally`,
+      path: `/cosmos/gov/v1beta1/proposals/${proposal_id}/tally`,
       method: "GET",
       format: "json",
       ...params,
@@ -879,20 +911,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
    * @tags Query
    * @name QueryVotes
    * @summary Votes queries votes of a given proposal.
-   * @request GET:/cosmos/gov/v1beta1/proposals/{proposalId}/votes
+   * @request GET:/cosmos/gov/v1beta1/proposals/{proposal_id}/votes
    */
   queryVotes = (
-    proposalId: string,
+    proposal_id: string,
     query?: {
       "pagination.key"?: string;
       "pagination.offset"?: string;
       "pagination.limit"?: string;
-      "pagination.countTotal"?: boolean;
+      "pagination.count_total"?: boolean;
+      "pagination.reverse"?: boolean;
     },
     params: RequestParams = {},
   ) =>
     this.request<V1Beta1QueryVotesResponse, RpcStatus>({
-      path: `/cosmos/gov/v1beta1/proposals/${proposalId}/votes`,
+      path: `/cosmos/gov/v1beta1/proposals/${proposal_id}/votes`,
       method: "GET",
       query: query,
       format: "json",
@@ -905,11 +938,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
    * @tags Query
    * @name QueryVote
    * @summary Vote queries voted information based on proposalID, voterAddr.
-   * @request GET:/cosmos/gov/v1beta1/proposals/{proposalId}/votes/{voter}
+   * @request GET:/cosmos/gov/v1beta1/proposals/{proposal_id}/votes/{voter}
    */
-  queryVote = (proposalId: string, voter: string, params: RequestParams = {}) =>
+  queryVote = (proposal_id: string, voter: string, params: RequestParams = {}) =>
     this.request<V1Beta1QueryVoteResponse, RpcStatus>({
-      path: `/cosmos/gov/v1beta1/proposals/${proposalId}/votes/${voter}`,
+      path: `/cosmos/gov/v1beta1/proposals/${proposal_id}/votes/${voter}`,
       method: "GET",
       format: "json",
       ...params,

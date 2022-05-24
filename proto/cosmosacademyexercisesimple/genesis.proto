@@ -1,12 +1,14 @@
 syntax = "proto3";
 package b9lab.cosmosacademyexercisesimple.cosmosacademyexercisesimple;
 
+import "gogoproto/gogo.proto";
+import "cosmosacademyexercisesimple/params.proto";
 // this line is used by starport scaffolding # genesis/proto/import
 
 option go_package = "github.com/b9lab/cosmos-academy-exercise-simple/x/cosmosacademyexercisesimple/types";
 
 // GenesisState defines the cosmosacademyexercisesimple module's genesis state.
 message GenesisState {
-    // this line is used by starport scaffolding # genesis/proto/state
-    // this line is used by starport scaffolding # ibc/genesis/proto
+  Params params = 1 [(gogoproto.nullable) = false];
+  // this line is used by starport scaffolding # genesis/proto/state
 }

@@ -1,6 +1,4 @@
-import { txClient, queryClient, MissingWalletError } from './module'
-// @ts-ignore
-import { SpVuexError } from '@starport/vuex'
+import { txClient, queryClient, MissingWalletError , registry} from './module'
 
 import { SigningInfo } from "./module/types/cosmos/slashing/v1beta1/genesis"
 import { ValidatorMissedBlocks } from "./module/types/cosmos/slashing/v1beta1/genesis"
@@ -59,6 +57,7 @@ const getDefaultState = () => {
 						Params: getStructure(Params.fromPartial({})),
 						
 		},
+		_Registry: registry,
 		_Subscriptions: new Set(),
 	}
 }
@@ -77,10 +76,10 @@ export default {
 			state[query][JSON.stringify(key)] = value
 		},
 		SUBSCRIBE(state, subscription) {
-			state._Subscriptions.add(subscription)
+			state._Subscriptions.add(JSON.stringify(subscription))
 		},
 		UNSUBSCRIBE(state, subscription) {
-			state._Subscriptions.delete(subscription)
+			state._Subscriptions.delete(JSON.stringify(subscription))
 		}
 	},
 	getters: {
@@ -105,6 +104,9 @@ export default {
 				
 		getTypeStructure: (state) => (type) => {
 			return state._Structure[type].fields
+		},
+		getRegistry: (state) => {
+			return state._Registry
 		}
 	},
 	actions: {
@@ -125,9 +127,10 @@ export default {
 		async StoreUpdate({ state, dispatch }) {
 			state._Subscriptions.forEach(async (subscription) => {
 				try {
-					await dispatch(subscription.action, subscription.payload)
+					const sub=JSON.parse(subscription)
+					await dispatch(sub.action, sub.payload)
 				}catch(e) {
-					throw new SpVuexError('Subscriptions: ' + e.message)
+					throw new Error('Subscriptions: ' + e.message)
 				}
 			})
 		},
@@ -137,8 +140,9 @@ export default {
 		 		
 		
 		
-		async QueryParams({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryParams({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryParams()).data
 				
@@ -147,7 +151,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryParams', payload: { options: { all }, params: {...key},query }})
 				return getters['getParams']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryParams', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryParams API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -158,8 +162,9 @@ export default {
 		 		
 		
 		
-		async QuerySigningInfo({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QuerySigningInfo({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.querySigningInfo( key.cons_address)).data
 				
@@ -168,7 +173,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QuerySigningInfo', payload: { options: { all }, params: {...key},query }})
 				return getters['getSigningInfo']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QuerySigningInfo', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QuerySigningInfo API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -179,21 +184,22 @@ export default {
 		 		
 		
 		
-		async QuerySigningInfos({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QuerySigningInfos({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.querySigningInfos(query)).data
 				
 					
-				while (all && (<any> value).pagination && (<any> value).pagination.nextKey!=null) {
-					let next_values=(await queryClient.querySigningInfos({...query, 'pagination.key':(<any> value).pagination.nextKey})).data
+				while (all && (<any> value).pagination && (<any> value).pagination.next_key!=null) {
+					let next_values=(await queryClient.querySigningInfos({...query, 'pagination.key':(<any> value).pagination.next_key})).data
 					value = mergeResults(value, next_values);
 				}
 				commit('QUERY', { query: 'SigningInfos', key: { params: {...key}, query}, value })
 				if (subscribe) commit('SUBSCRIBE', { action: 'QuerySigningInfos', payload: { options: { all }, params: {...key},query }})
 				return getters['getSigningInfos']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QuerySigningInfos', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QuerySigningInfos API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -208,9 +214,9 @@ export default {
 				return result
 			} catch (e) {
 				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgUnjail:Init', 'Could not initialize signing client. Wallet is required.')
+					throw new Error('TxClient:MsgUnjail:Init Could not initialize signing client. Wallet is required.')
 				}else{
-					throw new SpVuexError('TxClient:MsgUnjail:Send', 'Could not broadcast Tx: '+ e.message)
+					throw new Error('TxClient:MsgUnjail:Send Could not broadcast Tx: '+ e.message)
 				}
 			}
 		},
@@ -222,10 +228,9 @@ export default {
 				return msg
 			} catch (e) {
 				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgUnjail:Init', 'Could not initialize signing client. Wallet is required.')
+					throw new Error('TxClient:MsgUnjail:Init Could not initialize signing client. Wallet is required.')
 				}else{
-					throw new SpVuexError('TxClient:MsgUnjail:Create', 'Could not create message: ' + e.message)
-					
+					throw new Error('TxClient:MsgUnjail:Create Could not create message: ' + e.message)
 				}
 			}
 		},

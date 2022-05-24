@@ -1,6 +1,4 @@
-import { txClient, queryClient, MissingWalletError } from './module'
-// @ts-ignore
-import { SpVuexError } from '@starport/vuex'
+import { txClient, queryClient, MissingWalletError , registry} from './module'
 
 import { Params } from "./module/types/cosmos/distribution/v1beta1/distribution"
 import { ValidatorHistoricalRewards } from "./module/types/cosmos/distribution/v1beta1/distribution"
@@ -93,6 +91,7 @@ const getDefaultState = () => {
 						ValidatorSlashEventRecord: getStructure(ValidatorSlashEventRecord.fromPartial({})),
 						
 		},
+		_Registry: registry,
 		_Subscriptions: new Set(),
 	}
 }
@@ -111,10 +110,10 @@ export default {
 			state[query][JSON.stringify(key)] = value
 		},
 		SUBSCRIBE(state, subscription) {
-			state._Subscriptions.add(subscription)
+			state._Subscriptions.add(JSON.stringify(subscription))
 		},
 		UNSUBSCRIBE(state, subscription) {
-			state._Subscriptions.delete(subscription)
+			state._Subscriptions.delete(JSON.stringify(subscription))
 		}
 	},
 	getters: {
@@ -175,6 +174,9 @@ export default {
 				
 		getTypeStructure: (state) => (type) => {
 			return state._Structure[type].fields
+		},
+		getRegistry: (state) => {
+			return state._Registry
 		}
 	},
 	actions: {
@@ -195,9 +197,10 @@ export default {
 		async StoreUpdate({ state, dispatch }) {
 			state._Subscriptions.forEach(async (subscription) => {
 				try {
-					await dispatch(subscription.action, subscription.payload)
+					const sub=JSON.parse(subscription)
+					await dispatch(sub.action, sub.payload)
 				}catch(e) {
-					throw new SpVuexError('Subscriptions: ' + e.message)
+					throw new Error('Subscriptions: ' + e.message)
 				}
 			})
 		},
@@ -207,8 +210,9 @@ export default {
 		 		
 		
 		
-		async QueryParams({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryParams({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryParams()).data
 				
@@ -217,7 +221,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryParams', payload: { options: { all }, params: {...key},query }})
 				return getters['getParams']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryParams', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryParams API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -228,8 +232,9 @@ export default {
 		 		
 		
 		
-		async QueryValidatorOutstandingRewards({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryValidatorOutstandingRewards({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryValidatorOutstandingRewards( key.validator_address)).data
 				
@@ -238,7 +243,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryValidatorOutstandingRewards', payload: { options: { all }, params: {...key},query }})
 				return getters['getValidatorOutstandingRewards']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryValidatorOutstandingRewards', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryValidatorOutstandingRewards API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -249,8 +254,9 @@ export default {
 		 		
 		
 		
-		async QueryValidatorCommission({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryValidatorCommission({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryValidatorCommission( key.validator_address)).data
 				
@@ -259,7 +265,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryValidatorCommission', payload: { options: { all }, params: {...key},query }})
 				return getters['getValidatorCommission']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryValidatorCommission', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryValidatorCommission API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -270,21 +276,22 @@ export default {
 		 		
 		
 		
-		async QueryValidatorSlashes({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryValidatorSlashes({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryValidatorSlashes( key.validator_address, query)).data
 				
 					
-				while (all && (<any> value).pagination && (<any> value).pagination.nextKey!=null) {
-					let next_values=(await queryClient.queryValidatorSlashes( key.validator_address, {...query, 'pagination.key':(<any> value).pagination.nextKey})).data
+				while (all && (<any> value).pagination && (<any> value).pagination.next_key!=null) {
+					let next_values=(await queryClient.queryValidatorSlashes( key.validator_address, {...query, 'pagination.key':(<any> value).pagination.next_key})).data
 					value = mergeResults(value, next_values);
 				}
 				commit('QUERY', { query: 'ValidatorSlashes', key: { params: {...key}, query}, value })
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryValidatorSlashes', payload: { options: { all }, params: {...key},query }})
 				return getters['getValidatorSlashes']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryValidatorSlashes', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryValidatorSlashes API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -295,8 +302,9 @@ export default {
 		 		
 		
 		
-		async QueryDelegationRewards({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryDelegationRewards({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryDelegationRewards( key.delegator_address,  key.validator_address)).data
 				
@@ -305,7 +313,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryDelegationRewards', payload: { options: { all }, params: {...key},query }})
 				return getters['getDelegationRewards']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryDelegationRewards', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryDelegationRewards API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -316,8 +324,9 @@ export default {
 		 		
 		
 		
-		async QueryDelegationTotalRewards({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryDelegationTotalRewards({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryDelegationTotalRewards( key.delegator_address)).data
 				
@@ -326,7 +335,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryDelegationTotalRewards', payload: { options: { all }, params: {...key},query }})
 				return getters['getDelegationTotalRewards']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryDelegationTotalRewards', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryDelegationTotalRewards API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -337,8 +346,9 @@ export default {
 		 		
 		
 		
-		async QueryDelegatorValidators({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryDelegatorValidators({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryDelegatorValidators( key.delegator_address)).data
 				
@@ -347,7 +357,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryDelegatorValidators', payload: { options: { all }, params: {...key},query }})
 				return getters['getDelegatorValidators']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryDelegatorValidators', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryDelegatorValidators API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -358,8 +368,9 @@ export default {
 		 		
 		
 		
-		async QueryDelegatorWithdrawAddress({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryDelegatorWithdrawAddress({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryDelegatorWithdrawAddress( key.delegator_address)).data
 				
@@ -368,7 +379,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryDelegatorWithdrawAddress', payload: { options: { all }, params: {...key},query }})
 				return getters['getDelegatorWithdrawAddress']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryDelegatorWithdrawAddress', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryDelegatorWithdrawAddress API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -379,8 +390,9 @@ export default {
 		 		
 		
 		
-		async QueryCommunityPool({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params: {...key}, query=null }) {
+		async QueryCommunityPool({ commit, rootGetters, getters }, { options: { subscribe, all} = { subscribe:false, all:false}, params, query=null }) {
 			try {
+				const key = params ?? {};
 				const queryClient=await initQueryClient(rootGetters)
 				let value= (await queryClient.queryCommunityPool()).data
 				
@@ -389,7 +401,7 @@ export default {
 				if (subscribe) commit('SUBSCRIBE', { action: 'QueryCommunityPool', payload: { options: { all }, params: {...key},query }})
 				return getters['getCommunityPool']( { params: {...key}, query}) ?? {}
 			} catch (e) {
-				throw new SpVuexError('QueryClient:QueryCommunityPool', 'API Node Unavailable. Could not perform query: ' + e.message)
+				throw new Error('QueryClient:QueryCommunityPool API Node Unavailable. Could not perform query: ' + e.message)
 				
 			}
 		},
@@ -404,39 +416,9 @@ export default {
 				return result
 			} catch (e) {
 				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgWithdrawValidatorCommission:Init', 'Could not initialize signing client. Wallet is required.')
+					throw new Error('TxClient:MsgWithdrawValidatorCommission:Init Could not initialize signing client. Wallet is required.')
 				}else{
-					throw new SpVuexError('TxClient:MsgWithdrawValidatorCommission:Send', 'Could not broadcast Tx: '+ e.message)
-				}
-			}
-		},
-		async sendMsgSetWithdrawAddress({ rootGetters }, { value, fee = [], memo = '' }) {
-			try {
-				const txClient=await initTxClient(rootGetters)
-				const msg = await txClient.msgSetWithdrawAddress(value)
-				const result = await txClient.signAndBroadcast([msg], {fee: { amount: fee, 
-	gas: "200000" }, memo})
-				return result
-			} catch (e) {
-				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgSetWithdrawAddress:Init', 'Could not initialize signing client. Wallet is required.')
-				}else{
-					throw new SpVuexError('TxClient:MsgSetWithdrawAddress:Send', 'Could not broadcast Tx: '+ e.message)
-				}
-			}
-		},
-		async sendMsgFundCommunityPool({ rootGetters }, { value, fee = [], memo = '' }) {
-			try {
-				const txClient=await initTxClient(rootGetters)
-				const msg = await txClient.msgFundCommunityPool(value)
-				const result = await txClient.signAndBroadcast([msg], {fee: { amount: fee, 
-	gas: "200000" }, memo})
-				return result
-			} catch (e) {
-				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgFundCommunityPool:Init', 'Could not initialize signing client. Wallet is required.')
-				}else{
-					throw new SpVuexError('TxClient:MsgFundCommunityPool:Send', 'Could not broadcast Tx: '+ e.message)
+					throw new Error('TxClient:MsgWithdrawValidatorCommission:Send Could not broadcast Tx: '+ e.message)
 				}
 			}
 		},
@@ -449,9 +431,39 @@ export default {
 				return result
 			} catch (e) {
 				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgWithdrawDelegatorReward:Init', 'Could not initialize signing client. Wallet is required.')
+					throw new Error('TxClient:MsgWithdrawDelegatorReward:Init Could not initialize signing client. Wallet is required.')
 				}else{
-					throw new SpVuexError('TxClient:MsgWithdrawDelegatorReward:Send', 'Could not broadcast Tx: '+ e.message)
+					throw new Error('TxClient:MsgWithdrawDelegatorReward:Send Could not broadcast Tx: '+ e.message)
+				}
+			}
+		},
+		async sendMsgSetWithdrawAddress({ rootGetters }, { value, fee = [], memo = '' }) {
+			try {
+				const txClient=await initTxClient(rootGetters)
+				const msg = await txClient.msgSetWithdrawAddress(value)
+				const result = await txClient.signAndBroadcast([msg], {fee: { amount: fee, 
+	gas: "200000" }, memo})
+				return result
+			} catch (e) {
+				if (e == MissingWalletError) {
+					throw new Error('TxClient:MsgSetWithdrawAddress:Init Could not initialize signing client. Wallet is required.')
+				}else{
+					throw new Error('TxClient:MsgSetWithdrawAddress:Send Could not broadcast Tx: '+ e.message)
+				}
+			}
+		},
+		async sendMsgFundCommunityPool({ rootGetters }, { value, fee = [], memo = '' }) {
+			try {
+				const txClient=await initTxClient(rootGetters)
+				const msg = await txClient.msgFundCommunityPool(value)
+				const result = await txClient.signAndBroadcast([msg], {fee: { amount: fee, 
+	gas: "200000" }, memo})
+				return result
+			} catch (e) {
+				if (e == MissingWalletError) {
+					throw new Error('TxClient:MsgFundCommunityPool:Init Could not initialize signing client. Wallet is required.')
+				}else{
+					throw new Error('TxClient:MsgFundCommunityPool:Send Could not broadcast Tx: '+ e.message)
 				}
 			}
 		},
@@ -463,38 +475,9 @@ export default {
 				return msg
 			} catch (e) {
 				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgWithdrawValidatorCommission:Init', 'Could not initialize signing client. Wallet is required.')
+					throw new Error('TxClient:MsgWithdrawValidatorCommission:Init Could not initialize signing client. Wallet is required.')
 				}else{
-					throw new SpVuexError('TxClient:MsgWithdrawValidatorCommission:Create', 'Could not create message: ' + e.message)
-					
-				}
-			}
-		},
-		async MsgSetWithdrawAddress({ rootGetters }, { value }) {
-			try {
-				const txClient=await initTxClient(rootGetters)
-				const msg = await txClient.msgSetWithdrawAddress(value)
-				return msg
-			} catch (e) {
-				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgSetWithdrawAddress:Init', 'Could not initialize signing client. Wallet is required.')
-				}else{
-					throw new SpVuexError('TxClient:MsgSetWithdrawAddress:Create', 'Could not create message: ' + e.message)
-					
-				}
-			}
-		},
-		async MsgFundCommunityPool({ rootGetters }, { value }) {
-			try {
-				const txClient=await initTxClient(rootGetters)
-				const msg = await txClient.msgFundCommunityPool(value)
-				return msg
-			} catch (e) {
-				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgFundCommunityPool:Init', 'Could not initialize signing client. Wallet is required.')
-				}else{
-					throw new SpVuexError('TxClient:MsgFundCommunityPool:Create', 'Could not create message: ' + e.message)
-					
+					throw new Error('TxClient:MsgWithdrawValidatorCommission:Create Could not create message: ' + e.message)
 				}
 			}
 		},
@@ -505,10 +488,35 @@ export default {
 				return msg
 			} catch (e) {
 				if (e == MissingWalletError) {
-					throw new SpVuexError('TxClient:MsgWithdrawDelegatorReward:Init', 'Could not initialize signing client. Wallet is required.')
+					throw new Error('TxClient:MsgWithdrawDelegatorReward:Init Could not initialize signing client. Wallet is required.')
 				}else{
-					throw new SpVuexError('TxClient:MsgWithdrawDelegatorReward:Create', 'Could not create message: ' + e.message)
-					
+					throw new Error('TxClient:MsgWithdrawDelegatorReward:Create Could not create message: ' + e.message)
+				}
+			}
+		},
+		async MsgSetWithdrawAddress({ rootGetters }, { value }) {
+			try {
+				const txClient=await initTxClient(rootGetters)
+				const msg = await txClient.msgSetWithdrawAddress(value)
+				return msg
+			} catch (e) {
+				if (e == MissingWalletError) {
+					throw new Error('TxClient:MsgSetWithdrawAddress:Init Could not initialize signing client. Wallet is required.')
+				}else{
+					throw new Error('TxClient:MsgSetWithdrawAddress:Create Could not create message: ' + e.message)
+				}
+			}
+		},
+		async MsgFundCommunityPool({ rootGetters }, { value }) {
+			try {
+				const txClient=await initTxClient(rootGetters)
+				const msg = await txClient.msgFundCommunityPool(value)
+				return msg
+			} catch (e) {
+				if (e == MissingWalletError) {
+					throw new Error('TxClient:MsgFundCommunityPool:Init Could not initialize signing client. Wallet is required.')
+				}else{
+					throw new Error('TxClient:MsgFundCommunityPool:Create Could not create message: ' + e.message)
 				}
 			}
 		},
