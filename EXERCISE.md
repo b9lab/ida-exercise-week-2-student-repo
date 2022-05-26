@@ -27,6 +27,8 @@ Your goal is to run a Ignite command to create a new Protobuf type that follows 
 3. It is unique in the blockchain store. At what key it is stored does not matter, but you should keep the naming conventions of keeper functions chosen by Ignite.
 4. It should not have any associated messages.
 
+If you create any object named `WorldParams2` or try to _fix_ something that you believe is broken with `WorldParams2` that is OK here. When you are in Hackerrank, you should **not** create any object named `WorldParams2` or try to _fix_ something that you believe is broken with `WorldParams2`.
+
 ## How we test
 
 We have a hidden test file that expects your output to be properly named and prepared. Based on that:
