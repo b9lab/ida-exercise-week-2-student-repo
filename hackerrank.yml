@@ -1,0 +1,52 @@
+version: 1.0
+configuration:
+  has_webserver: false
+  scoring:
+    command: ./score.sh
+
+  readonly_paths:
+    - .github/*
+    - app/*
+    - cmd/*
+    - docs/docs.go
+    - proto/otherworld/params.proto
+    - proto/otherworld/tx.proto
+    - testutil/*
+    - x/otherworld/client/cli/query_params.go
+    - x/otherworld/client/cli/tx.go
+    - x/otherworld/keeper/grpc_query.go
+    - x/otherworld/keeper/grpc_query_params.go
+    - x/otherworld/keeper/grpc_query_params_test.go
+    - x/otherworld/keeper/keeper.go
+    - x/otherworld/keeper/msg_server.go
+    - x/otherworld/keeper/msg_server_test.go
+    - x/otherworld/keeper/params.go
+    - x/otherworld/keeper/params_test.go
+    - x/otherworld/keeper/world_params_duplicate.go
+    - x/otherworld/keeper/world_params_student_test.go
+    - x/otherworld/simulation/*
+    - x/otherworld/types/codec.go
+    - x/otherworld/types/errors.go
+    - x/otherworld/types/expected_keepers.go
+    - x/otherworld/types/params.go
+    - x/otherworld/types/params.pb.go
+    - x/otherworld/types/tx.pb.go
+    - x/otherworld/types/types.go
+    - x/otherworld/types/world_params_student_test.go
+    - x/otherworld/handler.go
+    - x/otherworld/module_simulation.go
+    - .gitignore
+    - config.yml
+    - Dockerfile
+    - hackerrank.yml
+    - readme-ignite.md
+    - readme.md
+    - score.sh
+
+  ide_config:
+    default_open_files:
+      - readme.md
+    project_menu:
+      run: bash ./score.sh
+      install: sudo apt update && sudo apt-get install jq build-essential -y && sudo curl https://get.ignite.com/cli@v0.22.1! | sudo bash && wget -qO- https://go.dev/dl/go1.18.3.linux-amd64.tar.gz | sudo tar xvz -C /opt && sudo ln -s /opt/go/bin/go /usr/bin/go
+      test: bash ./score.sh

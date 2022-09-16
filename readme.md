@@ -69,3 +69,24 @@ Make these tests pass:
     ```sh
     $ go test github.com/b9lab/other-world/x/otherworld/keeper
     ```
+
+To run them both at the same time, run:
+
+```sh
+$ docker run --rm -it -v $(pwd):/exercise -w /exercise exercise-w2 /exercise/score.sh
+```
+
+Or:
+
+```sh
+$ ./score.sh
+```
+
+In fact, `score.sh` is what we run in the Hackerrank environment.
+
+## HackerRank Environment
+
+The HackerRank environment presents an online IDE to you, which already contains all the project files. We have also already installed all packages and modules for you.
+You can start a new Terminal windows by selecting _Terminal_ -> _New Terminal_ in the top menu.
+
+You can run all tests to check your code by clicking on the _Run Tests_ button at the bottom right corner of the IDE.
