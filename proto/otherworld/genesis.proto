@@ -1,0 +1,14 @@
+syntax = "proto3";
+package b9lab.otherworld.otherworld;
+
+import "gogoproto/gogo.proto";
+import "otherworld/params.proto";
+// this line is used by starport scaffolding # genesis/proto/import
+
+option go_package = "github.com/b9lab/other-world/x/otherworld/types";
+
+// GenesisState defines the otherworld module's genesis state.
+message GenesisState {
+  Params params = 1 [(gogoproto.nullable) = false];
+  // this line is used by starport scaffolding # genesis/proto/state
+}
